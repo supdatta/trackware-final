@@ -59,6 +59,7 @@ const ProjectSetup = () => {
 
   const saveAndFinish = async () => {
     setSaving(true);
+    let success = false;
     try {
       let body: any;
       if (mode === "github") {
@@ -66,7 +67,7 @@ const ProjectSetup = () => {
         body = {
           type: "github",
           name: repoName,
-          description: `GitHub repo scan — ${githubTeamCount} people, $${githubBudget.toLocaleString()} budget`,
+          description: `GitHub repo scan - ${githubTeamCount} people, $${githubBudget.toLocaleString()} budget`,
           github_url: githubUrl,
           budget: githubBudget,
           team_count: githubTeamCount,
@@ -85,24 +86,30 @@ const ProjectSetup = () => {
 
       const res = await fetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         credentials: "include",
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to save project");
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server returned invalid response. Please try again.");
       }
 
-      await res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save project");
+      }
+
       toast.success("Project saved!");
+      success = true;
     } catch (err: any) {
       toast.error(err.message || "Could not save project");
     } finally {
       setSaving(false);
     }
 
+    // Navigate even if save fails so user can still use the dashboard
     if (mode === "github") {
       navigate("/dashboard/github", { state: { githubUrl, budget: githubBudget, teamCount: githubTeamCount } });
     } else {

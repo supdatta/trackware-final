@@ -147,13 +147,27 @@ const Projects = () => {
 
     const fetchProjects = async () => {
       try {
-        const res = await fetch("/api/projects", { credentials: "include" });
-        if (!res.ok) throw new Error("Failed to fetch projects");
-        const data: Project[] = await res.json();
-        setProjects(data);
+        const res = await fetch("/api/projects", { 
+          credentials: "include",
+          headers: { "Accept": "application/json" }
+        });
+        
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Server returned non-JSON response");
+          setProjects([]);
+          return;
+        }
+        
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to fetch projects");
+        }
+        setProjects(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error fetching projects:", err);
         toast.error("Failed to load projects");
+        setProjects([]);
       } finally {
         setLoading(false);
       }

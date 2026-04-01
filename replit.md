@@ -41,11 +41,10 @@ npm run build     # Build frontend for production
 
 ## Migration Notes
 
-This project was migrated from Lovable to Replit. The original used:
-- Supabase Auth → replaced with session-based auth (bcrypt + express-session + PostgreSQL session store)
-- Supabase Database → replaced with Replit PostgreSQL + Drizzle ORM
-- Supabase Edge Functions (github-repo, gemini-role-hours) → ported to Express routes
-- lovable-tagger → removed (Replit incompatible)
+This project uses:
+- Session-based auth (bcrypt + express-session + PostgreSQL session store)
+- PostgreSQL + Drizzle ORM for database
+- Express routes for GitHub scanning and Gemini AI integration
 
 ## Features
 

@@ -19,8 +19,8 @@ const Navbar = () => {
 
         <div className="hidden md:flex items-center gap-8 text-sm">
           <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">GitHub</a>
+          <a href="https://github.com/supdatta/trackware-final#readme" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
+          <a href="https://github.com/supdatta/trackware-final" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">GitHub</a>
         </div>
 
         <div className="hidden md:flex items-center gap-3">
@@ -52,8 +52,8 @@ const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-6 py-4 space-y-3">
           <a href="#features" className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2">Features</a>
-          <a href="#" className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2">Docs</a>
-          <a href="#" className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2">GitHub</a>
+          <a href="https://github.com/supdatta/trackware-final#readme" target="_blank" rel="noopener noreferrer" className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2">Docs</a>
+          <a href="https://github.com/supdatta/trackware-final" target="_blank" rel="noopener noreferrer" className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2">GitHub</a>
           <div className="pt-2 border-t border-border/50 flex flex-col gap-2">
             <Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">Sign In</Link>
             <Link

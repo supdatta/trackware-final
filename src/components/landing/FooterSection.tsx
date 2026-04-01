@@ -40,9 +40,9 @@ const FooterSection = () => {
             <h4 className="font-display font-semibold text-sm text-foreground mb-4 uppercase tracking-wider">Product</h4>
             <div className="flex flex-col gap-3 text-sm text-muted-foreground">
               <a href="#features" className="hover:text-foreground transition-colors w-fit">Features</a>
-              <a href="#" className="hover:text-foreground transition-colors w-fit">Documentation</a>
-              <a href="#" className="hover:text-foreground transition-colors w-fit">Changelog</a>
-              <a href="#" className="hover:text-foreground transition-colors w-fit">Pricing</a>
+              <a href="https://github.com/supdatta/trackware-final#readme" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors w-fit">Documentation</a>
+              <a href="https://github.com/supdatta/trackware-final/commits/main" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors w-fit">Changelog</a>
+              <Link to="/auth" className="hover:text-foreground transition-colors w-fit">Get Started</Link>
             </div>
           </div>
 
@@ -61,12 +61,12 @@ const FooterSection = () => {
           <div>
             <h4 className="font-display font-semibold text-sm text-foreground mb-4 uppercase tracking-wider">Community</h4>
             <div className="flex flex-col gap-3 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors flex items-center gap-1.5 w-fit">
+              <a href="https://github.com/supdatta/trackware-final" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5 w-fit">
                 <Github className="w-3.5 h-3.5" /> GitHub
               </a>
-              <a href="#" className="hover:text-foreground transition-colors w-fit">Discussions</a>
-              <a href="#" className="hover:text-foreground transition-colors w-fit">Discord</a>
-              <a href="#" className="hover:text-foreground transition-colors w-fit">Twitter / X</a>
+              <a href="https://github.com/supdatta/trackware-final/issues" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors w-fit">Issues</a>
+              <a href="https://github.com/supdatta/trackware-final/pulls" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors w-fit">Pull Requests</a>
+              <a href="https://github.com/supdatta/trackware-final#readme" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors w-fit">README</a>
             </div>
           </div>
         </div>

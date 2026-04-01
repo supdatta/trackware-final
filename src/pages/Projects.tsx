@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  GitBranch, PenTool, Plus, Trash2, Activity, Clock, DollarSign,
+  GitBranch, Plus, Trash2, Activity, Clock, DollarSign,
   Users, ExternalLink, FolderOpen, BarChart3, ArrowRight, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TeamMember {
   name: string;
@@ -128,6 +138,9 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "github" | "manual">("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -149,15 +162,25 @@ const Projects = () => {
     fetchProjects();
   }, [authLoading]);
 
-  const handleDelete = async (projectId: string) => {
-    if (!confirm("Delete this project? This cannot be undone.")) return;
+  const openDeleteDialog = (project: Project) => {
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`/api/projects/${projectToDelete.id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error("Failed to delete project");
-      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
       toast.success("Project deleted");
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
     } catch {
       toast.error("Failed to delete project");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -186,6 +209,34 @@ const Projects = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="absolute inset-0 gradient-mesh opacity-30 pointer-events-none" />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-background border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-foreground">{projectToDelete?.name}</span>? 
+              This action cannot be undone and all project data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              disabled={isDeleting}
+              className="bg-secondary text-foreground border-border hover:bg-secondary/80"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete Project"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="relative z-10">
         <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-10">
@@ -284,7 +335,7 @@ const Projects = () => {
                       key={project.id}
                       project={project}
                       onOpen={() => handleOpen(project)}
-                      onDelete={() => handleDelete(project.id)}
+                      onDelete={() => openDeleteDialog(project)}
                     />
                   ))}
                   <button

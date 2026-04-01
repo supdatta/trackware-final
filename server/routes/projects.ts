@@ -7,13 +7,17 @@ const router = Router();
 
 function formatProject(p: any) {
   return {
-    ...p,
-    team_members: p.teamMembers ? JSON.parse(p.teamMembers) : [],
+    id: p.id,
+    type: p.type,
+    name: p.name,
+    description: p.description,
+    github_url: p.githubUrl,
     budget: p.budget ? Number(p.budget) : undefined,
     schedule_weeks: p.scheduleWeeks ? Number(p.scheduleWeeks) : undefined,
     current_week: p.currentWeek ? Number(p.currentWeek) : undefined,
+    team_members: p.teamMembers ? JSON.parse(p.teamMembers) : [],
     team_count: p.teamCount ? Number(p.teamCount) : undefined,
-    github_url: p.githubUrl,
+    created_at: p.createdAt,
   };
 }
 

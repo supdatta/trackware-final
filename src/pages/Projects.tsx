@@ -134,12 +134,15 @@ const Projects = () => {
 
     const fetchProjects = async () => {
       try {
+        console.log("[v0] Fetching projects...");
         const res = await fetch("/api/projects", { credentials: "include" });
+        console.log("[v0] Projects response status:", res.status);
         if (!res.ok) throw new Error("Failed to fetch projects");
         const data: Project[] = await res.json();
+        console.log("[v0] Projects data:", data);
         setProjects(data);
       } catch (err) {
-        console.error("Error fetching projects:", err);
+        console.error("[v0] Error fetching projects:", err);
         toast.error("Failed to load projects");
       } finally {
         setLoading(false);

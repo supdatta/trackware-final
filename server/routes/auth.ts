@@ -11,6 +11,7 @@ declare module "express-session" {
     userId: string;
     userEmail: string;
     displayName?: string;
+    isAuthenticated?: boolean;
   }
 }
 
@@ -48,6 +49,7 @@ router.post("/signup", async (req, res) => {
     req.session.userId = user.id;
     req.session.userEmail = user.email;
     req.session.displayName = user.displayName || undefined;
+    req.session.isAuthenticated = true;
 
     return res.json({
       user: {
@@ -77,6 +79,7 @@ router.post("/signin", async (req, res) => {
     req.session.userId = user.id;
     req.session.userEmail = user.email;
     req.session.displayName = user.displayName || undefined;
+    req.session.isAuthenticated = true;
 
     return res.json({
       user: {

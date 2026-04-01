@@ -24,13 +24,24 @@ function formatProject(p: any) {
 router.get("/", async (req, res) => {
   try {
     const userId = req.session?.userId;
-    if (!userId) return res.json([]);
-
-    const userProjects = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.userId, userId))
-      .orderBy(desc(projects.createdAt));
+    const isAuthenticated = req.session?.isAuthenticated;
+    
+    // For authenticated users, only show their projects
+    // For guests (demo mode), show all projects so they can see what they created
+    let userProjects;
+    if (isAuthenticated && userId) {
+      userProjects = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.userId, userId))
+        .orderBy(desc(projects.createdAt));
+    } else {
+      // Guest mode: show all projects (demo-friendly)
+      userProjects = await db
+        .select()
+        .from(projects)
+        .orderBy(desc(projects.createdAt));
+    }
 
     res.json(userProjects.map(formatProject));
   } catch (err) {
@@ -72,15 +83,24 @@ router.post("/", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: "No session" });
-
+  const isAuthenticated = req.session?.isAuthenticated;
   const { id } = req.params;
 
   try {
-    const deleted = await db
-      .delete(projects)
-      .where(and(eq(projects.id, id), eq(projects.userId, userId)))
-      .returning();
+    let deleted;
+    if (isAuthenticated && userId) {
+      // Authenticated users can only delete their own projects
+      deleted = await db
+        .delete(projects)
+        .where(and(eq(projects.id, id), eq(projects.userId, userId)))
+        .returning();
+    } else {
+      // Guest mode: allow deleting any project (demo-friendly)
+      deleted = await db
+        .delete(projects)
+        .where(eq(projects.id, id))
+        .returning();
+    }
 
     if (deleted.length === 0) {
       return res.status(404).json({ error: "Project not found" });

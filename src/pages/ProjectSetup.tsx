@@ -83,7 +83,6 @@ const ProjectSetup = () => {
         };
       }
 
-      console.log("[v0] Saving project with body:", body);
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,15 +90,12 @@ const ProjectSetup = () => {
         body: JSON.stringify(body),
       });
 
-      console.log("[v0] Save response status:", res.status);
       if (!res.ok) {
         const err = await res.json();
-        console.log("[v0] Save error:", err);
         throw new Error(err.error || "Failed to save project");
       }
 
-      const savedProject = await res.json();
-      console.log("[v0] Saved project:", savedProject);
+      await res.json();
       toast.success("Project saved!");
     } catch (err: any) {
       toast.error(err.message || "Could not save project");

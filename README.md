@@ -18,7 +18,6 @@ Track effort, monitor productivity, and detect risks early. A developer-focused 
 ### Prerequisites
 
 - Node.js 18+
-- PostgreSQL database
 - npm or pnpm
 
 ### Installation
@@ -34,23 +33,7 @@ cd trackware-final
 npm install
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env.development.local
-```
-
-Configure your database connection in `.env.development.local`:
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/trackware
-SESSION_SECRET=your-secret-key
-```
-
-4. Push the database schema:
-```bash
-npm run db:push
-```
-
-5. Start the development server:
+3. Start the development server:
 ```bash
 npm run dev
 ```
@@ -60,58 +43,66 @@ The app will be available at `http://localhost:5000`.
 ### Default Login
 
 For quick access, use the admin credentials:
-- **Email:** `admin`
+- **Username:** `admin`
 - **Password:** `123456`
+
+Or create your own account via the sign-up page.
 
 ## Project Structure
 
 ```
 trackware/
-├── server/           # Express backend
-│   ├── routes/       # API routes (auth, projects, github, gemini)
-│   ├── db.ts         # Database connection
-│   └── index.ts      # Server entry point
 ├── src/              # React frontend
 │   ├── components/   # UI components
+│   │   ├── dashboard/  # Dashboard widgets
+│   │   ├── landing/    # Landing page sections
+│   │   └── ui/         # shadcn/ui components
 │   ├── pages/        # Page components
 │   ├── hooks/        # Custom React hooks
+│   │   ├── useAuth.ts    # Authentication (localStorage)
+│   │   └── useProjects.ts # Projects management (localStorage)
 │   └── lib/          # Utility functions
-├── shared/           # Shared types and schema
+├── server/           # Express backend (optional, for database mode)
 └── public/           # Static assets
 ```
 
 ## Tech Stack
 
 - **Frontend:** React 18, TypeScript, Tailwind CSS, shadcn/ui, Recharts
-- **Backend:** Express.js, Drizzle ORM
-- **Database:** PostgreSQL
+- **State:** localStorage for auth and projects (no database required)
 - **Build Tool:** Vite
 
-## API Endpoints
+## Data Storage
 
-### Authentication
-- `POST /api/auth/signup` - Create new account
-- `POST /api/auth/signin` - Sign in
-- `POST /api/auth/signout` - Sign out
-- `GET /api/auth/me` - Get current user
+This version uses **localStorage** for data persistence:
+- User accounts are stored locally in your browser
+- Projects are saved locally and persist across page refreshes
+- The `admin/123456` account always works (hardcoded)
 
-### Projects
-- `GET /api/projects` - List all projects
-- `POST /api/projects` - Create new project
-- `DELETE /api/projects/:id` - Delete project
-
-### GitHub
-- `POST /api/github/scan` - Scan a GitHub repository
+For a database-backed version, see the `server/` directory which includes Express routes for PostgreSQL.
 
 ## Scripts
 
 ```bash
-npm run dev          # Start development server (frontend + backend)
+npm run dev          # Start development server
 npm run build        # Build for production
 npm run preview      # Preview production build
 npm run test         # Run tests
-npm run db:push      # Push schema changes to database
 ```
+
+## Dashboard Types
+
+### GitHub Dashboard
+- Scan any public GitHub repository
+- View commit activity and contributor stats
+- Track PR health and merge metrics
+- Set budget and team size for cost analysis
+
+### Manual Project Dashboard (SPM)
+- Define project budget and schedule
+- Track earned value metrics (PV, EV, AC)
+- Monitor SPI/CPI performance indices
+- Manage team members and roles
 
 ## Contributing
 
@@ -121,10 +112,12 @@ npm run db:push      # Push schema changes to database
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## Links
+
+- [GitHub Repository](https://github.com/supdatta/trackware-final)
+- [Issues](https://github.com/supdatta/trackware-final/issues)
+- [Pull Requests](https://github.com/supdatta/trackware-final/pulls)
+
 ## License
 
 This project is private and proprietary.
-
-## Support
-
-For issues and feature requests, please use the [GitHub Issues](https://github.com/supdatta/trackware-final/issues) page.

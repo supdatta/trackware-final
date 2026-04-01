@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Activity, Mail, Lock, User, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -10,28 +12,26 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/api/auth/signin" : "/api/auth/signup";
-      const body = isLogin
-        ? { email, password }
-        : { email, password, displayName };
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Authentication failed");
-
-      toast.success(isLogin ? "Signed in!" : "Account created!");
+      if (isLogin) {
+        const result = signIn(email, password);
+        if (!result.success) {
+          throw new Error(result.error || "Sign in failed");
+        }
+        toast.success("Signed in!");
+      } else {
+        const result = signUp(email, password, displayName);
+        if (!result.success) {
+          throw new Error(result.error || "Sign up failed");
+        }
+        toast.success("Account created!");
+      }
       navigate("/projects");
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
@@ -46,7 +46,7 @@ const Auth = () => {
       <div className="absolute inset-0 gradient-mesh" />
       <div className="absolute inset-0 dot-grid opacity-15" />
 
-      {/* Left panel — brand / creative */}
+      {/* Left panel - brand / creative */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 relative p-12">
         <div className="relative z-10">
           <Link to="/" className="flex items-center gap-3 mb-20">
@@ -74,19 +74,11 @@ const Auth = () => {
           </div>
         </div>
 
-        {/* Decorative elements */}
+        {/* Demo credentials hint */}
         <div className="absolute bottom-12 left-12 right-12 z-10">
-          <div className="flex items-center gap-4">
-            <div className="flex -space-x-2">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="w-8 h-8 rounded-full bg-secondary border-2 border-background flex items-center justify-center">
-                  <span className="text-[10px] text-muted-foreground font-bold">
-                    {["EN", "PM", "TL"][i]}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <span className="text-sm text-muted-foreground">Built for teams that ship.</span>
+          <div className="glass-card p-4 rounded-xl">
+            <p className="text-xs text-muted-foreground mb-2">Demo credentials:</p>
+            <p className="text-sm text-foreground font-mono">admin / 123456</p>
           </div>
         </div>
 
@@ -95,7 +87,7 @@ const Auth = () => {
         <div className="absolute bottom-1/4 left-1/4 w-64 h-64 rounded-full bg-primary/3 blur-3xl" />
       </div>
 
-      {/* Right panel — auth form */}
+      {/* Right panel - auth form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
@@ -188,6 +180,11 @@ const Auth = () => {
                 {isLogin ? "Don't have an account? " : "Already have an account? "}
                 <span className="text-primary font-medium">{isLogin ? "Sign up" : "Sign in"}</span>
               </button>
+            </div>
+
+            {/* Mobile demo credentials */}
+            <div className="mt-6 lg:hidden glass-card p-3 rounded-lg text-center">
+              <p className="text-xs text-muted-foreground">Demo: <span className="font-mono text-foreground">admin / 123456</span></p>
             </div>
           </div>
 

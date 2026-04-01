@@ -95,6 +95,7 @@ const ProjectSetup = () => {
         throw new Error(err.error || "Failed to save project");
       }
 
+      await res.json();
       toast.success("Project saved!");
     } catch (err: any) {
       toast.error(err.message || "Could not save project");

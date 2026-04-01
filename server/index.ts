@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.development.local" });
 import express from "express";
 import cors from "cors";
 import session from "express-session";

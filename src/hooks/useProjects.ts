@@ -20,20 +20,33 @@ export interface Project {
   user_id?: string;
 }
 
+const PROJECTS_KEY = "trackware_projects";
+const CURRENT_USER_KEY = "trackware_current_user";
+
 export const useProjects = (userId?: string) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = useCallback(() => {
     setLoading(true);
     try {
-      const res = await fetch("/api/projects", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        setProjects(data);
-      } else {
+      const currentUserStr = localStorage.getItem(CURRENT_USER_KEY);
+      if (!currentUserStr) {
         setProjects([]);
+        setLoading(false);
+        return;
       }
+
+      const currentUser = JSON.parse(currentUserStr);
+      const currentUserId = currentUser.id;
+
+      const projectsStr = localStorage.getItem(PROJECTS_KEY);
+      const allProjects: Project[] = projectsStr ? JSON.parse(projectsStr) : [];
+
+      const userProjects = allProjects.filter((p) => p.user_id === currentUserId);
+      userProjects.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setProjects(userProjects);
     } catch {
       setProjects([]);
     } finally {
@@ -47,41 +60,42 @@ export const useProjects = (userId?: string) => {
 
   const createProject = async (projectData: Omit<Project, "id" | "created_at">): Promise<Project | null> => {
     try {
-      console.log("[v0] Creating project with data:", projectData);
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(projectData),
-      });
-
-      console.log("[v0] Create project response status:", res.status);
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.log("[v0] Create project error response:", errorText);
+      const currentUserStr = localStorage.getItem(CURRENT_USER_KEY);
+      if (!currentUserStr) {
+        console.log("[localStorage] Create project failed - no current user");
         return null;
       }
 
-      const newProject = await res.json();
-      console.log("[v0] Project created successfully:", newProject);
+      const currentUser = JSON.parse(currentUserStr);
+      const currentUserId = currentUser.id;
+
+      const newProject: Project = {
+        ...projectData,
+        id: `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        created_at: new Date().toISOString(),
+        user_id: currentUserId,
+      };
+
+      const projectsStr = localStorage.getItem(PROJECTS_KEY);
+      const allProjects: Project[] = projectsStr ? JSON.parse(projectsStr) : [];
+      allProjects.push(newProject);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(allProjects));
+
       setProjects((prev) => [newProject, ...prev]);
       return newProject;
     } catch (err) {
-      console.log("[v0] Create project exception:", err);
+      console.log("[localStorage] Create project exception:", err);
       return null;
     }
   };
 
   const deleteProject = async (projectId: string): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const projectsStr = localStorage.getItem(PROJECTS_KEY);
+      const allProjects: Project[] = projectsStr ? JSON.parse(projectsStr) : [];
 
-      if (!res.ok) {
-        return false;
-      }
+      const filteredProjects = allProjects.filter((p) => p.id !== projectId);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(filteredProjects));
 
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       return true;
@@ -92,20 +106,20 @@ export const useProjects = (userId?: string) => {
 
   const updateProject = async (projectId: string, updates: Partial<Project>): Promise<Project | null> => {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(updates),
-      });
+      const projectsStr = localStorage.getItem(PROJECTS_KEY);
+      const allProjects: Project[] = projectsStr ? JSON.parse(projectsStr) : [];
 
-      if (!res.ok) {
+      const projectIndex = allProjects.findIndex((p) => p.id === projectId);
+      if (projectIndex === -1) {
         return null;
       }
 
-      const updated = await res.json();
-      setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
-      return updated;
+      const updatedProject = { ...allProjects[projectIndex], ...updates };
+      allProjects[projectIndex] = updatedProject;
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(allProjects));
+
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? updatedProject : p)));
+      return updatedProject;
     } catch {
       return null;
     }

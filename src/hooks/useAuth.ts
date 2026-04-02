@@ -7,31 +7,16 @@ export type AppUser = {
   isGuest?: boolean;
 };
 
-const STORAGE_KEY = "trackware_user";
-const USERS_KEY = "trackware_users";
-
-// Simple user store in localStorage
-const getUsers = (): Record<string, { password: string; displayName: string }> => {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
-  } catch {
-    return {};
-  }
-};
-
-const saveUsers = (users: Record<string, { password: string; displayName: string }>) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
-
 export const useAuth = () => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchMe = useCallback(() => {
+  const fetchMe = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
       } else {
         setUser(null);
       }
@@ -46,38 +31,29 @@ export const useAuth = () => {
     fetchMe();
   }, [fetchMe]);
 
-  const signIn = (email: string, password: string): { success: boolean; error?: string } => {
-    // Hardcoded admin user - always works
-    if (email === "admin" && password === "123456") {
-      const adminUser: AppUser = {
-        id: "admin-user-id",
-        email: "admin",
-        displayName: "Admin",
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
-      setUser(adminUser);
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: data.error || "Sign in failed" };
+      }
+
+      setUser(data.user);
       return { success: true };
+    } catch (err) {
+      return { success: false, error: "Network error" };
     }
-
-    // Check stored users
-    const users = getUsers();
-    const storedUser = users[email];
-    
-    if (!storedUser || storedUser.password !== password) {
-      return { success: false, error: "Invalid email or password" };
-    }
-
-    const appUser: AppUser = {
-      id: `user-${email}`,
-      email,
-      displayName: storedUser.displayName || email,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appUser));
-    setUser(appUser);
-    return { success: true };
   };
 
-  const signUp = (email: string, password: string, displayName?: string): { success: boolean; error?: string } => {
+  const signUp = async (email: string, password: string, displayName?: string): Promise<{ success: boolean; error?: string }> => {
     if (!email || !password) {
       return { success: false, error: "Email and password are required" };
     }
@@ -86,32 +62,36 @@ export const useAuth = () => {
       return { success: false, error: "Password must be at least 6 characters" };
     }
 
-    const users = getUsers();
-    
-    if (users[email]) {
-      return { success: false, error: "User already exists" };
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password, displayName }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: data.error || "Sign up failed" };
+      }
+
+      setUser(data.user);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: "Network error" };
     }
-
-    // Save new user
-    users[email] = {
-      password,
-      displayName: displayName || (email.includes("@") ? email.split("@")[0] : email),
-    };
-    saveUsers(users);
-
-    // Auto sign in
-    const appUser: AppUser = {
-      id: `user-${email}`,
-      email,
-      displayName: displayName || (email.includes("@") ? email.split("@")[0] : email),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appUser));
-    setUser(appUser);
-    return { success: true };
   };
 
-  const signOut = () => {
-    localStorage.removeItem(STORAGE_KEY);
+  const signOut = async () => {
+    try {
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Ignore network errors on sign out
+    }
     setUser(null);
     setLoading(false);
   };

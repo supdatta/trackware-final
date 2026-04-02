@@ -59,12 +59,12 @@ const ProjectSetup = () => {
     ? githubUrl.includes("github.com") && githubTeamCount > 0
     : project.name.trim().length > 0 && project.teamMembers.some(m => m.name.trim());
 
-  const saveAndFinish = () => {
+  const saveAndFinish = async () => {
     setSaving(true);
     try {
       if (mode === "github") {
         const repoName = githubUrl.match(/github\.com\/[^\/]+\/([^\/\s#?]+)/)?.[1] || githubUrl;
-        createProject({
+        const result = await createProject({
           type: "github",
           name: repoName,
           description: `GitHub repo scan - ${githubTeamCount} people, $${githubBudget.toLocaleString()} budget`,
@@ -72,10 +72,11 @@ const ProjectSetup = () => {
           budget: githubBudget,
           team_count: githubTeamCount,
         });
+        if (!result) throw new Error("Failed to create project");
         toast.success("Project saved!");
         navigate("/dashboard/github", { state: { githubUrl, budget: githubBudget, teamCount: githubTeamCount } });
       } else {
-        createProject({
+        const result = await createProject({
           type: "manual",
           name: project.name,
           description: project.description,
@@ -84,6 +85,7 @@ const ProjectSetup = () => {
           current_week: project.currentWeek,
           team_members: project.teamMembers.filter(m => m.name.trim()),
         });
+        if (!result) throw new Error("Failed to create project");
         toast.success("Project saved!");
         navigate("/dashboard/spm", { state: { project } });
       }

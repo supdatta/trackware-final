@@ -48,7 +48,9 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const userId = req.session?.userId;
+  console.log("[v0] Create project - session:", { userId, sessionId: req.sessionID, hasSession: !!req.session });
   if (!userId) {
+    console.log("[v0] Create project failed - no userId in session");
     return res.status(401).json({ error: "No session" });
   }
 

@@ -20,13 +20,13 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const result = signIn(email, password);
+        const result = await signIn(email, password);
         if (!result.success) {
           throw new Error(result.error || "Sign in failed");
         }
         toast.success("Signed in!");
       } else {
-        const result = signUp(email, password, displayName);
+        const result = await signUp(email, password, displayName);
         if (!result.success) {
           throw new Error(result.error || "Sign up failed");
         }

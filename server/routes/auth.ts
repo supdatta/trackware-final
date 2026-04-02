@@ -48,9 +48,14 @@ router.post("/signup", async (req, res) => {
     }).returning();
 
     req.session.userId = user.id;
-    req.session.userEmail = user.email;
+    req.session.userEmail = user.email!;
     req.session.displayName = user.displayName || undefined;
     req.session.isAuthenticated = true;
+
+    // Explicitly save the session
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
 
     return res.json({
       user: {
@@ -87,9 +92,14 @@ router.post("/signin", async (req, res) => {
       }
 
       req.session.userId = adminUser.id;
-      req.session.userEmail = adminUser.email;
+      req.session.userEmail = adminUser.email!;
       req.session.displayName = adminUser.displayName || "Admin";
       req.session.isAuthenticated = true;
+
+      // Explicitly save the session
+      await new Promise<void>((resolve, reject) =>
+        req.session.save((err) => (err ? reject(err) : resolve()))
+      );
 
       return res.json({
         user: {
@@ -106,9 +116,14 @@ router.post("/signin", async (req, res) => {
     }
 
     req.session.userId = user.id;
-    req.session.userEmail = user.email;
+    req.session.userEmail = user.email!;
     req.session.displayName = user.displayName || undefined;
     req.session.isAuthenticated = true;
+
+    // Explicitly save the session
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
 
     return res.json({
       user: {

@@ -132,7 +132,7 @@ const Projects = () => {
     if (!projectToDelete) return;
     setIsDeleting(true);
     try {
-      const success = deleteProject(projectToDelete.id);
+      const success = await deleteProject(projectToDelete.id);
       if (!success) throw new Error("Failed to delete project");
       toast.success("Project deleted");
       setDeleteDialogOpen(false);

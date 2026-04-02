@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5000",
+    "dev": "concurrently \"node --env-file=.env.development.local node_modules/.bin/tsx server/index.ts\" \"vite --port 5000\"",
     "dev:server": "node --env-file=.env.development.local node_modules/.bin/tsx server/index.ts",
     "dev:client": "vite",
     "dev:full": "concurrently \"node --env-file=.env.development.local node_modules/.bin/tsx server/index.ts\" \"vite --port 5000\"",

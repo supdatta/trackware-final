@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   GitBranch, Plus, Trash2, Activity, Clock, DollarSign,
@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjects, Project } from "@/hooks/useProjects";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,25 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface TeamMember {
-  name: string;
-  role: string;
-}
-
-interface Project {
-  id: string;
-  type: "github" | "manual";
-  name: string;
-  description?: string;
-  github_url?: string;
-  budget?: number;
-  schedule_weeks?: number;
-  current_week?: number;
-  team_count?: number;
-  team_members?: TeamMember[];
-  created_at: string;
-}
 
 const timeAgo = (dateStr: string) => {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -134,33 +116,12 @@ const ProjectCard = ({
 const Projects = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, loading, deleteProject } = useProjects(user?.id);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "github" | "manual">("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    if (authLoading) return;
-
-    const fetchProjects = async () => {
-      try {
-        const res = await fetch("/api/projects", { credentials: "include" });
-        if (!res.ok) throw new Error("Failed to fetch projects");
-        const data: Project[] = await res.json();
-        setProjects(data);
-      } catch (err) {
-        console.error("Error fetching projects:", err);
-        toast.error("Failed to load projects");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, [authLoading]);
 
   const openDeleteDialog = (project: Project) => {
     setProjectToDelete(project);
@@ -171,9 +132,8 @@ const Projects = () => {
     if (!projectToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/projects/${projectToDelete.id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error("Failed to delete project");
-      setProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
+      const success = deleteProject(projectToDelete.id);
+      if (!success) throw new Error("Failed to delete project");
       toast.success("Project deleted");
       setDeleteDialogOpen(false);
       setProjectToDelete(null);
@@ -205,6 +165,8 @@ const Projects = () => {
 
   const githubCount = projects.filter(p => p.type === "github").length;
   const manualCount = projects.filter(p => p.type === "manual").length;
+
+  const isLoading = loading || authLoading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -266,10 +228,10 @@ const Projects = () => {
         <main className="container mx-auto px-6 py-10">
           <div className="mb-8">
             <h1 className="font-display text-3xl font-bold text-foreground mb-1">My Projects</h1>
-            <p className="text-muted-foreground text-sm">All your saved dashboards — reopen any time to pick up where you left off.</p>
+            <p className="text-muted-foreground text-sm">All your saved dashboards - reopen any time to pick up where you left off.</p>
           </div>
 
-          {!loading && projects.length === 0 && (
+          {!isLoading && projects.length === 0 && (
             <div className="text-center py-20">
               <FolderOpen className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
               <h2 className="font-display text-xl font-semibold text-foreground mb-2">No projects yet</h2>
@@ -284,20 +246,20 @@ const Projects = () => {
             </div>
           )}
 
-          {loading && (
+          {isLoading && (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
           )}
 
-          {!loading && projects.length > 0 && (
+          {!isLoading && projects.length > 0 && (
             <>
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Search projects…"
+                    placeholder="Search projects..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-secondary border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -311,7 +273,7 @@ const Projects = () => {
                   ].map(tab => (
                     <button
                       key={tab.key}
-                      onClick={() => setFilterType(tab.key as any)}
+                      onClick={() => setFilterType(tab.key as typeof filterType)}
                       className={`px-3 py-2 text-xs font-medium rounded-lg transition-all ${
                         filterType === tab.key
                           ? "bg-primary text-primary-foreground"

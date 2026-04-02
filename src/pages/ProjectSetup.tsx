@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjects } from "@/hooks/useProjects";
 
 type Mode = "github" | "manual" | null;
 
@@ -24,9 +25,9 @@ interface ManualProject {
 }
 
 const FEATURES = [
-  { icon: BarChart3, title: "Earned Value Metrics", desc: "Track PV, EV, AC, SPI, CPI — understand cost and schedule performance at a glance." },
+  { icon: BarChart3, title: "Earned Value Metrics", desc: "Track PV, EV, AC, SPI, CPI - understand cost and schedule performance at a glance." },
   { icon: Shield, title: "5-Axis Health Radar", desc: "Monitor schedule, cost, quality, productivity, and risk health scores in real-time." },
-  { icon: Zap, title: "Smart Alerts", desc: "Automatic alerts when metrics cross thresholds — SPI drops, cost overruns, team overload." },
+  { icon: Zap, title: "Smart Alerts", desc: "Automatic alerts when metrics cross thresholds - SPI drops, cost overruns, team overload." },
   { icon: Users, title: "Team Capacity Tracking", desc: "Visualize workload distribution with heatmaps and capacity tables per team member." },
   { icon: Activity, title: "Trend Analysis", desc: "Weekly EV trends and productivity charts to spot patterns and forecast outcomes." },
   { icon: Code, title: "GitHub Repo Scanner", desc: "Scan any public repo to extract commit activity, PR health, contributor stats, and more." },
@@ -35,6 +36,7 @@ const FEATURES = [
 const ProjectSetup = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { createProject } = useProjects(user?.id);
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<Mode>(null);
   const [saving, setSaving] = useState(false);
@@ -57,22 +59,23 @@ const ProjectSetup = () => {
     ? githubUrl.includes("github.com") && githubTeamCount > 0
     : project.name.trim().length > 0 && project.teamMembers.some(m => m.name.trim());
 
-  const saveAndFinish = async () => {
+  const saveAndFinish = () => {
     setSaving(true);
     try {
-      let body: any;
       if (mode === "github") {
         const repoName = githubUrl.match(/github\.com\/[^\/]+\/([^\/\s#?]+)/)?.[1] || githubUrl;
-        body = {
+        createProject({
           type: "github",
           name: repoName,
-          description: `GitHub repo scan — ${githubTeamCount} people, $${githubBudget.toLocaleString()} budget`,
+          description: `GitHub repo scan - ${githubTeamCount} people, $${githubBudget.toLocaleString()} budget`,
           github_url: githubUrl,
           budget: githubBudget,
           team_count: githubTeamCount,
-        };
+        });
+        toast.success("Project saved!");
+        navigate("/dashboard/github", { state: { githubUrl, budget: githubBudget, teamCount: githubTeamCount } });
       } else {
-        body = {
+        createProject({
           type: "manual",
           name: project.name,
           description: project.description,
@@ -80,33 +83,14 @@ const ProjectSetup = () => {
           schedule_weeks: project.totalScheduleWeeks,
           current_week: project.currentWeek,
           team_members: project.teamMembers.filter(m => m.name.trim()),
-        };
+        });
+        toast.success("Project saved!");
+        navigate("/dashboard/spm", { state: { project } });
       }
-
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to save project");
-      }
-
-      await res.json();
-      toast.success("Project saved!");
     } catch (err: any) {
       toast.error(err.message || "Could not save project");
     } finally {
       setSaving(false);
-    }
-
-    if (mode === "github") {
-      navigate("/dashboard/github", { state: { githubUrl, budget: githubBudget, teamCount: githubTeamCount } });
-    } else {
-      navigate("/dashboard/spm", { state: { project } });
     }
   };
 
@@ -158,12 +142,12 @@ const ProjectSetup = () => {
               <button onClick={() => setMode("github")} className={`glass-card p-6 text-left transition-all hover:border-primary/40 ${mode === "github" ? "border-primary/60 bg-primary/5" : ""}`}>
                 <GitBranch className={`w-8 h-8 mb-3 ${mode === "github" ? "text-primary" : "text-muted-foreground"}`} />
                 <h3 className="font-display text-lg font-semibold text-foreground mb-1">GitHub Repo Scan</h3>
-                <p className="text-sm text-muted-foreground">Paste a public repo URL and get instant metrics — commits, PRs, health score, contributors.</p>
+                <p className="text-sm text-muted-foreground">Paste a public repo URL and get instant metrics - commits, PRs, health score, contributors.</p>
               </button>
               <button onClick={() => setMode("manual")} className={`glass-card p-6 text-left transition-all hover:border-primary/40 ${mode === "manual" ? "border-primary/60 bg-primary/5" : ""}`}>
                 <PenTool className={`w-8 h-8 mb-3 ${mode === "manual" ? "text-primary" : "text-muted-foreground"}`} />
                 <h3 className="font-display text-lg font-semibold text-foreground mb-1">Manual Project Setup</h3>
-                <p className="text-sm text-muted-foreground">Enter project budget, schedule, and team — track earned value, costs, and health manually.</p>
+                <p className="text-sm text-muted-foreground">Enter project budget, schedule, and team - track earned value, costs, and health manually.</p>
               </button>
             </div>
           </div>
@@ -284,7 +268,7 @@ const ProjectSetup = () => {
         {step === 2 && (
           <div className="max-w-3xl mx-auto animate-fade-up">
             <div className="text-center mb-10">
-              <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-3">Here's what you'll get</h1>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-3">Here&apos;s what you&apos;ll get</h1>
               <p className="text-muted-foreground">
                 {mode === "github" ? "Your repo will be scanned for these insights." : "Your project dashboard will include all these tools."}
               </p>

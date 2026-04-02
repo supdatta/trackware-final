@@ -22,37 +22,35 @@ function formatProject(p: any) {
 }
 
 router.get("/", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   try {
     const userId = req.session?.userId;
-    const isAuthenticated = req.session?.isAuthenticated;
     
-    // For authenticated users, only show their projects
-    // For guests (demo mode), show all projects so they can see what they created
-    let userProjects;
-    if (isAuthenticated && userId) {
-      userProjects = await db
-        .select()
-        .from(projects)
-        .where(eq(projects.userId, userId))
-        .orderBy(desc(projects.createdAt));
-    } else {
-      // Guest mode: show all projects (demo-friendly)
-      userProjects = await db
-        .select()
-        .from(projects)
-        .orderBy(desc(projects.createdAt));
+    // If no user session, return empty array instead of error
+    if (!userId) {
+      return res.json([]);
     }
+    
+    // Show all projects for the user (includes guest-created projects)
+    const userProjects = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.userId, userId))
+      .orderBy(desc(projects.createdAt));
 
-    res.json(userProjects.map(formatProject));
+    return res.json(userProjects.map(formatProject));
   } catch (err) {
     console.error("Get projects error:", err);
-    res.status(500).json({ error: "Failed to fetch projects" });
+    return res.status(500).json({ error: "Failed to fetch projects" });
   }
 });
 
 router.post("/", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: "No session" });
+  if (!userId) {
+    return res.status(401).json({ error: "No session" });
+  }
 
   const { type, name, description, github_url, budget, schedule_weeks, current_week, team_members, team_count } = req.body;
 
@@ -74,42 +72,38 @@ router.post("/", async (req, res) => {
       teamCount: team_count !== undefined ? String(team_count) : null,
     }).returning();
 
-    res.json(formatProject(project));
+    return res.json(formatProject(project));
   } catch (err) {
     console.error("Create project error:", err);
-    res.status(500).json({ error: "Failed to create project" });
+    return res.status(500).json({ error: "Failed to create project" });
   }
 });
 
 router.delete("/:id", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   const userId = req.session?.userId;
-  const isAuthenticated = req.session?.isAuthenticated;
   const { id } = req.params;
 
   try {
     let deleted;
-    if (isAuthenticated && userId) {
-      // Authenticated users can only delete their own projects
+    if (userId) {
+      // Users can only delete their own projects
       deleted = await db
         .delete(projects)
         .where(and(eq(projects.id, id), eq(projects.userId, userId)))
         .returning();
     } else {
-      // Guest mode: allow deleting any project (demo-friendly)
-      deleted = await db
-        .delete(projects)
-        .where(eq(projects.id, id))
-        .returning();
+      return res.status(401).json({ error: "No session" });
     }
 
     if (deleted.length === 0) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     console.error("Delete project error:", err);
-    res.status(500).json({ error: "Failed to delete project" });
+    return res.status(500).json({ error: "Failed to delete project" });
   }
 });
 

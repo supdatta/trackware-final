@@ -1,19 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import {
-  TrendingUp, TrendingDown, DollarSign, Calendar, Users, Activity,
-  AlertTriangle, CheckCircle, Info, Clock, BarChart3, RefreshCw,
-} from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Activity, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Info, Plus, ChartBar as BarChart3, GitBranch } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar,
 } from "recharts";
-
-const jitter = (base: number, pct = 0.05) =>
-  +(base * (1 + (Math.random() - 0.5) * 2 * pct)).toFixed(2);
-const jitterInt = (base: number, pct = 0.05) =>
-  Math.round(base * (1 + (Math.random() - 0.5) * 2 * pct));
 
 const CHART_TOOLTIP_STYLE = {
   backgroundColor: "hsl(240, 8%, 10%)",
@@ -45,14 +37,17 @@ const SPMDashboard = () => {
   const location = useLocation();
   const passedProject = (location.state as any)?.project;
 
-  const [project] = useState(() => ({
+  const [baseProject] = useState(() => ({
     name: passedProject?.name || "My Project",
     description: passedProject?.description || "",
-    totalBudget: passedProject?.totalBudget || 120000,
-    totalScheduleWeeks: passedProject?.totalScheduleWeeks || 24,
+    baseBudget: passedProject?.totalBudget || 120000,
+    baseScheduleWeeks: passedProject?.totalScheduleWeeks || 24,
     currentWeek: passedProject?.currentWeek || 14,
     teamSize: passedProject?.teamMembers?.length || 5,
   }));
+
+  const [scopeCreep, setScopeCreep] = useState(false);
+  const [unplannedRequirements, setUnplannedRequirements] = useState(0);
 
   const teamMembers = passedProject?.teamMembers?.filter((m: any) => m.name.trim()) || [
     { name: "Team Member 1", role: "Lead" },
@@ -60,9 +55,28 @@ const SPMDashboard = () => {
     { name: "Team Member 3", role: "Frontend" },
   ];
 
-  // Core EV metrics
-  const [ev, setEv] = useState(() => {
-    const progress = project.currentWeek / project.totalScheduleWeeks;
+  const addUnplannedRequirement = useCallback(() => {
+    setUnplannedRequirements(prev => prev + 1);
+  }, []);
+
+  const project = useMemo(() => {
+    let adjustedBudget = baseProject.baseBudget;
+    let adjustedSchedule = baseProject.baseScheduleWeeks;
+
+    if (scopeCreep && unplannedRequirements > 0) {
+      adjustedBudget += unplannedRequirements * 15000;
+      adjustedSchedule += unplannedRequirements * 3;
+    }
+
+    return {
+      ...baseProject,
+      totalBudget: adjustedBudget,
+      totalScheduleWeeks: adjustedSchedule,
+    };
+  }, [baseProject, scopeCreep, unplannedRequirements]);
+
+  const ev = useMemo(() => {
+    const progress = baseProject.currentWeek / project.totalScheduleWeeks;
     const pv = Math.round(project.totalBudget * progress);
     const evVal = Math.round(pv * 0.9);
     const ac = Math.round(pv * 0.97);
@@ -73,84 +87,49 @@ const SPMDashboard = () => {
       scheduleVariance: evVal - pv,
       costVariance: evVal - ac,
     };
-  });
+  }, [project, baseProject.currentWeek]);
 
-  // Health scores
-  const [health, setHealth] = useState({
+  const health = useMemo(() => ({
     schedule: 72, cost: 78, quality: 85, productivity: 68, risk: 60, overall: 73,
-  });
+  }), []);
 
-  // Weekly trend
-  const [trend] = useState(() => {
+  const trend = useMemo(() => {
     const weeks: any[] = [];
-    for (let i = 0; i < Math.min(project.currentWeek, 7); i++) {
-      const wk = project.currentWeek - 6 + i;
+    for (let i = 0; i < Math.min(baseProject.currentWeek, 7); i++) {
+      const wk = baseProject.currentWeek - 6 + i;
       if (wk < 1) continue;
       const progress = wk / project.totalScheduleWeeks;
       const pvW = Math.round(project.totalBudget * progress);
       weeks.push({
         week: `W${wk}`,
         pv: pvW,
-        ev: Math.round(pvW * (0.85 + Math.random() * 0.1)),
-        ac: Math.round(pvW * (0.9 + Math.random() * 0.12)),
+        ev: Math.round(pvW * 0.9),
+        ac: Math.round(pvW * 0.97),
       });
     }
     return weeks;
-  });
+  }, [project, baseProject.currentWeek]);
 
-  // Team workload
-  const [teamData] = useState(() =>
+  const teamData = useMemo(() =>
     teamMembers.map((m: any) => ({
       ...m,
-      weeklyHours: Array.from({ length: 7 }, () => Math.floor(Math.random() * 6) + 4),
-      avgHours: +(Math.random() * 4 + 5).toFixed(1),
+      weeklyHours: [8, 9, 7, 9, 8, 4, 0],
+      avgHours: 6.4,
     }))
-  );
+  , [teamMembers]);
 
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-
-  const refreshNow = useCallback(() => {
-    setEv(prev => ({
-      pv: jitterInt(prev.pv, 0.02),
-      ev: jitterInt(prev.ev, 0.03),
-      ac: jitterInt(prev.ac, 0.03),
-      spi: jitter(prev.spi, 0.04),
-      cpi: jitter(prev.cpi, 0.04),
-      scheduleVariance: jitterInt(prev.scheduleVariance, 0.1),
-      costVariance: jitterInt(prev.costVariance, 0.1),
-    }));
-    setHealth(prev => {
-      const s = {
-        schedule: Math.min(100, Math.max(0, jitterInt(prev.schedule, 0.06))),
-        cost: Math.min(100, Math.max(0, jitterInt(prev.cost, 0.06))),
-        quality: Math.min(100, Math.max(0, jitterInt(prev.quality, 0.04))),
-        productivity: Math.min(100, Math.max(0, jitterInt(prev.productivity, 0.08))),
-        risk: Math.min(100, Math.max(0, jitterInt(prev.risk, 0.08))),
-        overall: 0,
-      };
-      s.overall = Math.round((s.schedule + s.cost + s.quality + s.productivity + s.risk) / 5);
-      return s;
-    });
-    setLastUpdated(new Date());
-  }, []);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const id = setInterval(refreshNow, 5000);
-    return () => clearInterval(id);
-  }, [autoRefresh, refreshNow]);
-
-  // Alerts
-  const alerts = [];
-  if (ev.spi < 0.95) alerts.push({ type: ev.spi < 0.85 ? "critical" : "warning", title: "SPI Below Threshold", desc: `SPI is ${ev.spi.toFixed(2)}` });
-  if (ev.cpi < 0.95) alerts.push({ type: ev.cpi < 0.85 ? "critical" : "warning", title: "CPI Below Threshold", desc: `CPI is ${ev.cpi.toFixed(2)}` });
-  if (ev.costVariance < -5000) alerts.push({ type: "warning", title: "Cost Overrun", desc: `CV is $${ev.costVariance.toLocaleString()}` });
-  if (health.schedule < 60) alerts.push({ type: "critical", title: "Schedule Health Critical", desc: `Score: ${health.schedule}/100` });
-  if (ev.spi >= 1.0 && ev.cpi >= 1.0) alerts.push({ type: "info", title: "Project On Track", desc: `SPI ${ev.spi.toFixed(2)} / CPI ${ev.cpi.toFixed(2)}` });
-
-  const overloaded = teamData.filter((m: any) => m.avgHours >= 9);
-  if (overloaded.length > 0) alerts.push({ type: "critical", title: "Team Overload", desc: `${overloaded.map((m: any) => m.name).join(", ")}` });
+  const alerts = useMemo(() => {
+    const a = [];
+    if (ev.spi < 0.95) a.push({ type: ev.spi < 0.85 ? "critical" : "warning", title: "SPI Below Threshold", desc: `SPI is ${ev.spi.toFixed(2)}` });
+    if (ev.cpi < 0.95) a.push({ type: ev.cpi < 0.85 ? "critical" : "warning", title: "CPI Below Threshold", desc: `CPI is ${ev.cpi.toFixed(2)}` });
+    if (ev.costVariance < -5000) a.push({ type: "warning", title: "Cost Overrun", desc: `CV is $${ev.costVariance.toLocaleString()}` });
+    if (health.schedule < 60) a.push({ type: "critical", title: "Schedule Health Critical", desc: `Score: ${health.schedule}/100` });
+    if (ev.spi >= 1.0 && ev.cpi >= 1.0) a.push({ type: "info", title: "Project On Track", desc: `SPI ${ev.spi.toFixed(2)} / CPI ${ev.cpi.toFixed(2)}` });
+    if (unplannedRequirements > 0) a.push({ type: "warning", title: "Scope Creep Detected", desc: `${unplannedRequirements} unplanned requirement(s) added` });
+    const overloaded = teamData.filter((m: any) => m.avgHours >= 9);
+    if (overloaded.length > 0) a.push({ type: "critical", title: "Team Overload", desc: `${overloaded.map((m: any) => m.name).join(", ")}` });
+    return a;
+  }, [ev, health, unplannedRequirements, teamData]);
 
   const radarData = [
     { axis: "Schedule", value: health.schedule },
@@ -172,28 +151,44 @@ const SPMDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Project Header */}
-      <div className="glass-card p-6">
+      <div className="glass-card p-6 space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="font-display text-xl font-bold text-foreground">{project.name}</h2>
             {project.description && <p className="text-sm text-muted-foreground mt-1">{project.description}</p>}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`p-2 rounded-lg transition-all ${autoRefresh ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+              onClick={() => setScopeCreep(!scopeCreep)}
+              className={`px-3 py-2 rounded-lg transition-all text-sm font-medium flex items-center gap-2 ${
+                scopeCreep
+                  ? "bg-health-amber/20 text-health-amber border border-health-amber/30"
+                  : "bg-muted text-muted-foreground border border-border"
+              }`}
             >
-              <RefreshCw className={`w-4 h-4 ${autoRefresh ? "animate-spin" : ""}`} style={autoRefresh ? { animationDuration: "3s" } : {}} />
+              <GitBranch className="w-4 h-4" />
+              Scope Creep
             </button>
-            <span className="text-[10px] text-muted-foreground">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
+            {scopeCreep && (
+              <button
+                onClick={addUnplannedRequirement}
+                className="px-3 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 transition-all text-sm font-medium flex items-center gap-2 hover:bg-primary/20"
+              >
+                <Plus className="w-4 h-4" />
+                Add Requirement
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> Budget: ${project.totalBudget.toLocaleString()}</span>
           <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Week {project.currentWeek} / {project.totalScheduleWeeks}</span>
           <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {project.teamSize} members</span>
+          {unplannedRequirements > 0 && (
+            <span className="flex items-center gap-1 text-health-amber font-medium">
+              <AlertTriangle className="w-3.5 h-3.5" /> {unplannedRequirements} unplanned requirement(s)
+            </span>
+          )}
         </div>
       </div>
 

@@ -49,6 +49,13 @@ const SPMDashboard = () => {
   const [scopeCreep, setScopeCreep] = useState(false);
   const [unplannedRequirements, setUnplannedRequirements] = useState(0);
 
+  const [earnedValueRatio, setEarnedValueRatio] = useState(0.9);
+  const [actualCostRatio, setActualCostRatio] = useState(0.97);
+  const [teamEfficiency, setTeamEfficiency] = useState(100);
+  const [qualityScore, setQualityScore] = useState(85);
+  const [productivityScore, setProductivityScore] = useState(68);
+  const [riskScore, setRiskScore] = useState(60);
+
   const teamMembers = passedProject?.teamMembers?.filter((m: any) => m.name.trim()) || [
     { name: "Team Member 1", role: "Lead" },
     { name: "Team Member 2", role: "Backend" },
@@ -78,8 +85,8 @@ const SPMDashboard = () => {
   const ev = useMemo(() => {
     const progress = baseProject.currentWeek / project.totalScheduleWeeks;
     const pv = Math.round(project.totalBudget * progress);
-    const evVal = Math.round(pv * 0.9);
-    const ac = Math.round(pv * 0.97);
+    const evVal = Math.round(pv * earnedValueRatio);
+    const ac = Math.round(pv * actualCostRatio);
     return {
       pv, ev: evVal, ac,
       spi: +(evVal / pv).toFixed(2),
@@ -87,11 +94,35 @@ const SPMDashboard = () => {
       scheduleVariance: evVal - pv,
       costVariance: evVal - ac,
     };
-  }, [project, baseProject.currentWeek]);
+  }, [project, baseProject.currentWeek, earnedValueRatio, actualCostRatio]);
 
-  const health = useMemo(() => ({
-    schedule: 72, cost: 78, quality: 85, productivity: 68, risk: 60, overall: 73,
-  }), []);
+  const health = useMemo(() => {
+    let scheduleScore = 100;
+    if (ev.spi < 0.95) scheduleScore -= (0.95 - ev.spi) * 100;
+    if (ev.spi < 0.85) scheduleScore -= 20;
+    scheduleScore = Math.max(0, scheduleScore);
+
+    let costScore = 100;
+    if (ev.cpi < 0.95) costScore -= (0.95 - ev.cpi) * 100;
+    if (ev.cpi < 0.85) costScore -= 20;
+    costScore = Math.max(0, costScore);
+
+    const efficiency = teamEfficiency;
+    const quality = qualityScore;
+    const productivity = productivityScore;
+    const riskReduction = 100 - riskScore;
+
+    const overall = Math.round((scheduleScore + costScore + quality + productivity + riskReduction) / 5);
+
+    return {
+      schedule: Math.min(100, Math.max(0, scheduleScore)),
+      cost: Math.min(100, Math.max(0, costScore)),
+      quality,
+      productivity,
+      risk: 100 - riskReduction,
+      overall,
+    };
+  }, [ev, teamEfficiency, qualityScore, productivityScore, riskScore]);
 
   const trend = useMemo(() => {
     const weeks: any[] = [];
@@ -113,10 +144,10 @@ const SPMDashboard = () => {
   const teamData = useMemo(() =>
     teamMembers.map((m: any) => ({
       ...m,
-      weeklyHours: [8, 9, 7, 9, 8, 4, 0],
-      avgHours: 6.4,
+      weeklyHours: [8, 9, 7, 9, 8, 4, 0].map(h => Math.round(h * (teamEfficiency / 100))),
+      avgHours: +(6.4 * (teamEfficiency / 100)).toFixed(1),
     }))
-  , [teamMembers]);
+  , [teamMembers, teamEfficiency]);
 
   const alerts = useMemo(() => {
     const a = [];
@@ -147,6 +178,24 @@ const SPMDashboard = () => {
   const budgetUsed = ev.ac;
   const budgetPct = Math.round((budgetUsed / project.totalBudget) * 100);
   const schedulePct = Math.round((project.currentWeek / project.totalScheduleWeeks) * 100);
+
+  const ControlSlider = ({ label, value, onChange, min = 0, max = 100, step = 1, suffix = "" }: any) => (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-muted-foreground">{label}</label>
+        <span className="text-xs font-bold text-foreground">{value}{suffix}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -189,6 +238,69 @@ const SPMDashboard = () => {
               <AlertTriangle className="w-3.5 h-3.5" /> {unplannedRequirements} unplanned requirement(s)
             </span>
           )}
+        </div>
+      </div>
+
+      {/* Control Panel */}
+      <div className="glass-card p-6">
+        <h3 className="text-sm font-medium text-muted-foreground mb-6 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-primary" /> Live Metrics Control
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <ControlSlider
+            label="Earned Value Ratio"
+            value={Math.round(earnedValueRatio * 100)}
+            onChange={(v) => setEarnedValueRatio(v / 100)}
+            min={50}
+            max={150}
+            step={1}
+            suffix="%"
+          />
+          <ControlSlider
+            label="Actual Cost Ratio"
+            value={Math.round(actualCostRatio * 100)}
+            onChange={(v) => setActualCostRatio(v / 100)}
+            min={50}
+            max={150}
+            step={1}
+            suffix="%"
+          />
+          <ControlSlider
+            label="Team Efficiency"
+            value={teamEfficiency}
+            onChange={setTeamEfficiency}
+            min={50}
+            max={150}
+            step={1}
+            suffix="%"
+          />
+          <ControlSlider
+            label="Quality Score"
+            value={qualityScore}
+            onChange={setQualityScore}
+            min={0}
+            max={100}
+            step={1}
+            suffix="/100"
+          />
+          <ControlSlider
+            label="Productivity"
+            value={productivityScore}
+            onChange={setProductivityScore}
+            min={0}
+            max={100}
+            step={1}
+            suffix="/100"
+          />
+          <ControlSlider
+            label="Risk Level"
+            value={riskScore}
+            onChange={setRiskScore}
+            min={0}
+            max={100}
+            step={1}
+            suffix="/100"
+          />
         </div>
       </div>
 

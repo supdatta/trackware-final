@@ -6,6 +6,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar,
 } from "recharts";
+import { ExcelUploader } from "./ExcelUploader";
 
 const CHART_TOOLTIP_STYLE = {
   backgroundColor: "hsl(240, 8%, 10%)",
@@ -55,6 +56,7 @@ const SPMDashboard = () => {
   const [qualityScore, setQualityScore] = useState(85);
   const [productivityScore, setProductivityScore] = useState(68);
   const [riskScore, setRiskScore] = useState(60);
+  const [uploadedEntriesCount, setUploadedEntriesCount] = useState(0);
 
   const teamMembers = passedProject?.teamMembers?.filter((m: any) => m.name.trim()) || [
     { name: "Team Member 1", role: "Lead" },
@@ -303,6 +305,14 @@ const SPMDashboard = () => {
           />
         </div>
       </div>
+
+      {/* Excel Upload */}
+      {passedProject?.type === 'manual' && (
+        <ExcelUploader
+          projectId={passedProject?.id || ''}
+          onUploadSuccess={(count) => setUploadedEntriesCount(count)}
+        />
+      )}
 
       {/* Budget + Schedule Progress */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
